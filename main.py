@@ -19,8 +19,8 @@ if __name__ == "__main__":
     end_date = "20220101"
 
     ## get data from akshare
-    get_data = AkData(sheet,start_date,end_date)
-    get_data.get_data()
+    '''get_data = AkData(sheet,start_date,end_date)'''
+    '''get_data.get_data()'''
 
     ##process data
     data = DataProcess(sheet)

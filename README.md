@@ -12,3 +12,13 @@ BackTest.py：is the class to backtest and get result
 
 main.py：execution
 
+# Result
+Example
+
+![image](https://github.com/algo21-221040113/Assignment1/blob/master/Example.png)
+
+
+
+Annual Rate Use different time range
+
+![image](https://github.com/algo21-221040113/Assignment1/blob/master/Annual%20Rate.png)

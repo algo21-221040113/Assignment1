@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 
 
 class BackTest:
@@ -8,9 +9,15 @@ class BackTest:
         self.H = h  ##on pos time
         self.data = data  ##original data
         self.time_length = time_length  # backtest_time_length
-        self.posit = 100000
+        self.posit = 1000000
         self.real_pos = False
         self.net = False
+        self.net_lst = False
+        self.profit = False
+        self.profit_lst = []
+
+        self.annual = False
+        self.sharp = False
 
         self.__strategy_init()
 
@@ -19,7 +26,8 @@ class BackTest:
             self.data[i]['Momentum'] = self.data[i]['Close'].pct_change(periods=self.R)
 
     def run_backtest(self):
-        self.net = [0] * (self.R - 1)
+        self.net_lst = [0] * (self.R)
+        self.profit = 0
         pos = 0
         for i in range(self.R, self.time_length):
             if (i - self.R) % self.H == 0:
@@ -37,24 +45,90 @@ class BackTest:
                 sig_df['dire'] = direct
                 sig_df['pos'] = self.posit // sig_df['close']
 
-                dir_pos = []
-                index_pos = []
-                pos_pos = []
-                net_pos = []
-                for k in range(len(self.data)):
-                    if sig_df.loc[k]['dire'] != 0:
-                        index_pos.append(k)
-                        dir_pos.append(sig_df.loc[k]['dire'])
-                        pos_pos.append(sig_df.loc[k]['pos'])
-                        net_pos.append(sig_df.loc[k]['pos'] * sig_df.loc[k]['close'])
                 if pos == 0:
-                    pos = 1
+                    dir_pos = []
+                    index_pos = []
+                    pos_pos = []
+                    net_pos = []
+                    for k in range(len(self.data)):
+                        if sig_df.loc[k]['dire'] != 0:
+                            index_pos.append(k)
+                            dir_pos.append(sig_df.loc[k]['dire'])
+                            pos_pos.append(sig_df.loc[k]['pos'])
+                            net_pos.append(sig_df.loc[k]['pos'] * sig_df.loc[k]['close'])
+
                     self.real_pos = pd.DataFrame(index_pos, columns=['index'])
-                self.real_pos['index'] = index_pos
-                self.real_pos['directione'] = dir_pos
-                self.real_pos['pos'] = pos_pos
-                self.real_pos['net'] = net_pos
-                self.net.append(self.real_pos['net'].sum())
+                    self.real_pos['index'] = index_pos
+                    self.real_pos['direction'] = dir_pos
+                    self.real_pos['pos'] = pos_pos
+                    self.real_pos['net'] = net_pos
+                    self.net = self.real_pos['net'].sum()
+                    self.net_lst.append(self.net)
+
+                    pos = 1
+                else:
+                    # sell
+                    self.profit = 0
+                    for j in range(6):
+                        index = int(self.real_pos.loc[j]['index'])
+                        direction = self.real_pos.loc[j]['direction']
+                        pos = self.real_pos.loc[j]['pos']
+                        self.profit += (self.data[index].iloc[i]['Close'] - self.data[index].iloc[i - 1][
+                            'Close']) * pos * direction
+
+                    self.net += self.profit
+                    self.profit_lst.append(self.profit)
+
+                    self.net_lst.append(self.net)
+
+                    # buy
+                    dir_pos = []
+                    index_pos = []
+                    pos_pos = []
+                    net_pos = []
+                    for k in range(len(self.data)):
+                        if sig_df.loc[k]['dire'] != 0:
+                            index_pos.append(k)
+                            dir_pos.append(sig_df.loc[k]['dire'])
+                            pos_pos.append(sig_df.loc[k]['pos'])
+                            net_pos.append(sig_df.loc[k]['pos'] * sig_df.loc[k]['close'])
+
+                    self.real_pos['index'] = index_pos
+                    self.real_pos['index'] = index_pos
+                    self.real_pos['direction'] = dir_pos
+                    self.real_pos['pos'] = pos_pos
+                    self.real_pos['net'] = net_pos
+
+
+
+            else:
+                self.profit = 0
+                for j in range(6):
+                    index = int(self.real_pos.loc[j]['index'])
+                    direction = self.real_pos.loc[j]['direction']
+                    pos = self.real_pos.loc[j]['pos']
+                    self.profit += (self.data[index].iloc[i]['Close'] - self.data[index].iloc[i - 1][
+                        'Close']) * pos * direction
+
+                self.net += self.profit
+                self.profit_lst.append(self.profit)
+                self.net_lst.append(self.net)
+
+    def result(self):
+        self.net_lst = self.net_lst[self.R:]
+
+        self.annual = sum(self.profit_lst) * 250 / (self.net_lst[0] * self.time_length)
+        self.sharp = (self.annual - 0.03) / np.std(self.profit_lst / self.net_lst[0])
+
+    def plot_result(self):
+
+        df = pd.DataFrame(self.net_lst, columns=["net"])
+        df = df.set_index(self.data[1].iloc[self.R:]['Day'])
+        df.plot.line()
+
+
+
+
 
 
 
